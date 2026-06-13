@@ -1,0 +1,5 @@
+metric,value
+train_auc,0.7234
+val_auc,0.6891
+test_auc,0.6745
+correct_predictions,0.6745

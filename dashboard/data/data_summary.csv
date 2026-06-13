@@ -1,0 +1,7 @@
+metric,value
+n_students,1000.0
+n_interactions,5000.0
+n_skills,15.0
+avg_interactions_per_student,5.0
+correct_rate,0.55
+median_sequence_length,2.0

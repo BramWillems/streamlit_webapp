@@ -1,0 +1,21 @@
+interaction_id,skill,correct_text,predicted_prob
+1,Skill_1,✓ Correct,0.725
+2,Skill_5,✗ Incorrect,0.711
+3,Skill_1,✓ Correct,0.723
+4,Skill_2,✗ Incorrect,0.501
+5,Skill_3,✓ Correct,0.356
+6,Skill_4,✗ Incorrect,0.304
+7,Skill_1,✓ Correct,0.418
+8,Skill_3,✓ Correct,0.461
+9,Skill_1,✗ Incorrect,0.764
+10,Skill_4,✓ Correct,0.493
+11,Skill_2,✓ Correct,0.317
+12,Skill_4,✗ Incorrect,0.594
+13,Skill_4,✓ Correct,0.567
+14,Skill_2,✓ Correct,0.748
+15,Skill_5,✓ Correct,0.797
+16,Skill_5,✗ Incorrect,0.541
+17,Skill_2,✗ Incorrect,0.344
+18,Skill_1,✓ Correct,0.899
+19,Skill_1,✗ Incorrect,0.614
+20,Skill_5,✓ Correct,0.738
