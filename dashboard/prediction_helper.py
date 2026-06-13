@@ -117,16 +117,18 @@ def predict_bkt(bkt_params, sequence, skill_id=None):
     }
 
 
+
 def load_bkt_parameters(bkt_params_path=None):
     """Load BKT parameters from CSV file."""
     if bkt_params_path is None:
-        bkt_params_path = Path(__file__).parent.parent / "bkt_params.csv"
+        # Go up from the file's location to find bkt_params.csv
+        # If this function is in dashboard/ or dashboard/pages/, adjust accordingly
+        bkt_params_path = Path(__file__).parent / "bkt_params.csv"
     
     if not Path(bkt_params_path).exists():
         raise FileNotFoundError(f"BKT parameters file not found: {bkt_params_path}")
     
     df = pd.read_csv(bkt_params_path)
-    # Use skill ID as index
     if 'skill' in df.columns:
         df = df.set_index('skill')
     
