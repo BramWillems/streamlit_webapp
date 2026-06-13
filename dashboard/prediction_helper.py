@@ -120,7 +120,7 @@ def predict_bkt(bkt_params, sequence, skill_id=None):
 def load_bkt_parameters(bkt_params_path=None):
     """Load BKT parameters from CSV file."""
     if bkt_params_path is None:
-        bkt_params_path = Path(__file__).parent.parent / "dashboard/data/bkt_parameters.csv"
+        bkt_params_path = Path(__file__).parent.parent / "/mount/src/streamlit_webapp/bkt_params.csv"
     
     if not Path(bkt_params_path).exists():
         raise FileNotFoundError(f"BKT parameters file not found: {bkt_params_path}")
