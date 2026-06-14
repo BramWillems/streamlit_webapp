@@ -577,6 +577,156 @@ if student_sequence and len(student_sequence) > 0:
             for part in insight_parts:
                 st.info(part)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 6: DKT FUTURE SEQUENCE PREDICTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+if student_sequence and len(student_sequence) > 0:
+    st.markdown("---")
+    st.subheader("6️⃣ DKT Future Sequence Prediction")
+    st.markdown(
+        "Select a skill and number of future steps. The model will predict each step "
+        "using the student's history, then feed that prediction back as input for the next — "
+        "simulating how the student's knowledge state evolves over time."
+    )
+
+    col1, col2 = st.columns([1, 2], gap="large")
+
+    with col1:
+        forecast_skill = st.selectbox(
+            "Skill to forecast:",
+            sorted(skill_sequences.keys()),
+            format_func=lambda x: skill_labels.get(x, x),
+            key="forecast_skill"
+        )
+
+        n_steps = st.slider(
+            "Steps to predict ahead:",
+            min_value=1,
+            max_value=20,
+            value=5,
+            key="forecast_steps"
+        )
+
+        st.markdown("---")
+        st.markdown("##### How it works")
+        st.markdown("""
+        1. Start from the student's **real interaction history** for the chosen skill  
+        2. Predict P(correct) for step N using DKT  
+        3. The predicted outcome (correct if P ≥ 0.5) is added to the history  
+        4. Repeat for step N+1, N+2, …  
+        
+        **Confidence** = how strongly the model commits to its prediction  
+        (distance from 0.5, scaled to 0–100%)
+        """)
+
+    with col2:
+        # ── Run the DKT forward simulation ───────────────────────────────────
+        def dkt_predict_next(interaction_history, skill):
+            """Single DKT step: recency-weighted P(correct) for `skill`."""
+            skill_history = [
+                i for i in interaction_history if i.get("skill") == skill
+            ]
+            if not skill_history:
+                return 0.5  # no data → prior
+
+            weight_sum = 0.0
+            weighted_correct = 0.0
+            n = len(skill_history)
+
+            for idx, interaction in enumerate(skill_history):
+                time_weight = np.exp((idx - n) / 5)
+                weighted_correct += interaction["correct"] * time_weight
+                weight_sum += time_weight
+
+            raw_prob = weighted_correct / weight_sum if weight_sum > 0 else 0.5
+            # smooth toward 0.5 prior (same as predict_dkt_simple)
+            return max(0.05, min(0.95, 0.7 * raw_prob + 0.3 * 0.5))
+
+        # Build a mutable copy of history for the chosen skill
+        running_history = list(student_sequence)   # all skills, for context
+        skill_history_only = [
+            i for i in running_history if i["skill"] == forecast_skill
+        ]
+        n_real = len(skill_history_only)
+
+        rows = []
+        cumulative_log_conf = 0.0  # log-sum for chain confidence
+
+        for step in range(1, n_steps + 1):
+            prob = dkt_predict_next(running_history, forecast_skill)
+
+            predicted_correct = 1 if prob >= 0.5 else 0
+            outcome_label     = "✅ Correct" if predicted_correct == 1 else "❌ Incorrect"
+
+            # Confidence = how far from 0.5, mapped to 0–100%
+            step_confidence = abs(prob - 0.5) * 2   # 0 = total uncertainty, 1 = certain
+
+            # Chain confidence: geometric mean of step confidences so far
+            # Use a floor so log is defined
+            cumulative_log_conf += np.log(max(step_confidence, 0.01))
+            chain_confidence = np.exp(cumulative_log_conf / step)
+
+            rows.append({
+                "Step":              step,
+                "Attempt #":         n_real + step,
+                "P(correct)":        prob,
+                "Predicted Outcome": outcome_label,
+                "Step Confidence":   step_confidence,
+                "Chain Confidence":  chain_confidence,
+            })
+
+            # Feed prediction back into history for next step
+            running_history.append({
+                "skill":   forecast_skill,
+                "correct": predicted_correct,
+            })
+
+        # ── Render table ─────────────────────────────────────────────────────
+        display_df = pd.DataFrame([
+            {
+                "Step":              r["Step"],
+                "Attempt #":         r["Attempt #"],
+                "P(correct)":        f"{r['P(correct)']:.1%}",
+                "Predicted Outcome": r["Predicted Outcome"],
+                "Step Confidence":   f"{r['Step Confidence']:.1%}",
+                "Chain Confidence":  f"{r['Chain Confidence']:.1%}",
+            }
+            for r in rows
+        ])
+
+        st.markdown(
+            f"**Skill {forecast_skill}** — based on "
+            f"**{n_real} real attempt{'s' if n_real != 1 else ''}**, "
+            f"predicting next **{n_steps} step{'s' if n_steps != 1 else ''}**"
+        )
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+        # ── Chain confidence callout ──────────────────────────────────────────
+        final_chain_conf = rows[-1]["Chain Confidence"]
+        if final_chain_conf >= 0.60:
+            st.success(
+                f"✅ Overall chain confidence: **{final_chain_conf:.1%}** — "
+                f"the model is reasonably certain about this sequence."
+            )
+        elif final_chain_conf >= 0.35:
+            st.warning(
+                f"⚠️ Overall chain confidence: **{final_chain_conf:.1%}** — "
+                f"predictions become less certain further into the future."
+            )
+        else:
+            st.error(
+                f"❌ Overall chain confidence: **{final_chain_conf:.1%}** — "
+                f"high uncertainty; more student data would help."
+            )
+
+        st.caption(
+            "**Step Confidence**: how strongly the model commits to this single step (0% = coin-flip, 100% = certain).  "
+            "**Chain Confidence**: geometric mean of all step confidences up to this point — degrades as uncertainty compounds."
+        )
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # FOOTER
 # ─────────────────────────────────────────────────────────────────────────────
